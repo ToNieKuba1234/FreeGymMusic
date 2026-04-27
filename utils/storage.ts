@@ -1,73 +1,125 @@
-
 import * as FileSystem from 'expo-file-system/legacy';
 import Song from '../models/Song';
- 
-const fileUri = FileSystem.documentDirectory + 'songs.json';
- 
-export default async function addSong(song: Song) {
-  console.log("addSong:", song);
-  const songs = await loadSongsFromFile();
-  songs.push(song);
-  await saveSongsToFile(songs);
-}
- 
-export async function saveSongsToFile(songs: Song[]) {
-  try {
-    const plainSongs = songs.map(s => ({
-      title: s.title,
-      artist: s.artist,
-      duration: s.duration,
-      uri: s.uri,
-    }));
-    const json = JSON.stringify(plainSongs);
-    console.log("Zapisuję JSON:", json);
-    await FileSystem.writeAsStringAsync(fileUri, json);
-    console.log("Plik zapisany:", fileUri);
-  } catch (err) {
-    console.error('Błąd przy zapisie:', err);
+
+const SONGS_DIR = FileSystem.documentDirectory + 'songs/';
+const METADATA_FILE = FileSystem.documentDirectory + 'songs.json';
+
+async function ensureSongsDir(): Promise<void> {
+  const info = await FileSystem.getInfoAsync(SONGS_DIR);
+  if (!info.exists) {
+    await FileSystem.makeDirectoryAsync(SONGS_DIR, { intermediates: true });
   }
 }
- 
+
 export async function loadSongsFromFile(): Promise<Song[]> {
   try {
-    const exists = await FileSystem.getInfoAsync(fileUri);
-    if (!exists.exists) {
-      return [];
-    }
-    const json = await FileSystem.readAsStringAsync(fileUri);
+    const info = await FileSystem.getInfoAsync(METADATA_FILE);
+    if (!info.exists) return [];
+    const json = await FileSystem.readAsStringAsync(METADATA_FILE);
     const parsed = JSON.parse(json);
-    const songs = parsed.map(
-      (s: any) => new Song(s.title, s.artist, s.duration, s.uri)
-    );
-    console.log("Załadowane obiekty Song:", songs);
-    return songs;
-  } catch (err) {
-    console.error('Błąd przy wczytywaniu songs.json:', err);
+    return parsed.map((s: any) => new Song(s.title, s.duration, s.uri));
+  } catch {
     return [];
   }
 }
- 
-export async function removeSongByUri(uriToRemove: string) {
+
+export async function saveSongsToFile(songs: Song[]): Promise<void> {
   try {
-    const songs = await loadSongsFromFile();
-    const filteredSongs = songs.filter(song => song.uri !== uriToRemove);
-    if (filteredSongs.length === songs.length) {
-      console.log(`⚠️ Nie znaleziono piosenki do usunięcia o uri: ${uriToRemove}`);
-      return;
-    }
-    await saveSongsToFile(filteredSongs);
-    console.log(`Usunięto piosenkę o uri: ${uriToRemove}`);
+    const plain = songs.map(s => ({
+      title: s.title,
+      duration: s.duration,
+      uri: s.uri,
+    }));
+    await FileSystem.writeAsStringAsync(METADATA_FILE, JSON.stringify(plain));
   } catch (err) {
-    console.error('Błąd przy usuwaniu piosenki:', err);
+    console.error('Error saving songs:', err);
   }
 }
- 
-export async function createTestSongs() {
-  const testSongs = [
-    new Song("Bohemian Rhapsody", "Queen", 354000, ""),
-    new Song("Stairway to Heaven", "Led Zeppelin", 482000, ""),
-    new Song("Hotel California", "Eagles", 391000, ""),
-  ];
-  await saveSongsToFile(testSongs);
-  console.log("Test songs created.");
+
+export default async function addSong(song: Song): Promise<void> {
+  const songs = await loadSongsFromFile();
+  const exists = songs.some(s => s.uri === song.uri);
+  if (!exists) {
+    songs.push(song);
+    await saveSongsToFile(songs);
+  }
+}
+
+export async function removeSongByUri(uri: string): Promise<void> {
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (fileInfo.exists) {
+      await FileSystem.deleteAsync(uri, { idempotent: true });
+    }
+    const songs = await loadSongsFromFile();
+    await saveSongsToFile(songs.filter(s => s.uri !== uri));
+  } catch (err) {
+    console.error('Error removing song:', err);
+  }
+}
+
+export type SyncResult = {
+  imported: Song[];
+  skipped: string[];
+  failed: string[];
+};
+
+export async function syncSongs(
+  pickedAssets: Array<{ uri: string; name: string; mimeType?: string }>
+): Promise<SyncResult> {
+  await ensureSongsDir();
+  const existing = await loadSongsFromFile();
+  const existingUriSet = new Set(existing.map(s => s.uri));
+  const result: SyncResult = { imported: [], skipped: [], failed: [] };
+
+  for (const asset of pickedAssets) {
+    try {
+      const safeName = asset.name.replace(/[^a-zA-Z0-9._\-\s]/g, '_');
+      const destUri = SONGS_DIR + safeName;
+
+      if (existingUriSet.has(destUri)) {
+        result.skipped.push(asset.name);
+        continue;
+      }
+
+      await FileSystem.copyAsync({ from: asset.uri, to: destUri });
+
+      const title = safeName.replace(/\.[^.]+$/, '').trim();
+      const newSong = new Song(title, 0, destUri);
+      result.imported.push(newSong);
+      existingUriSet.add(destUri);
+    } catch (err) {
+      console.error('Failed to import:', asset.name, err);
+      result.failed.push(asset.name);
+    }
+  }
+
+  if (result.imported.length > 0) {
+    await saveSongsToFile([...existing, ...result.imported]);
+  }
+
+  return result;
+}
+
+export async function scanAndRebuild(): Promise<Song[]> {
+  await ensureSongsDir();
+  const files = await FileSystem.readDirectoryAsync(SONGS_DIR);
+  const mp3Files = files.filter(f => f.toLowerCase().endsWith('.mp3'));
+
+  const existing = await loadSongsFromFile();
+  const existingMap = new Map(existing.map(s => [s.uri, s]));
+
+  const songs: Song[] = mp3Files.map(filename => {
+    const uri = SONGS_DIR + filename;
+    if (existingMap.has(uri)) return existingMap.get(uri)!;
+    const title = filename.replace(/\.[^.]+$/, '').trim();
+    return new Song(title, 0, uri);
+  });
+
+  await saveSongsToFile(songs);
+  return songs;
+}
+
+export function getSongsDir(): string {
+  return SONGS_DIR;
 }

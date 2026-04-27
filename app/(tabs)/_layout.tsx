@@ -16,7 +16,7 @@ export default function TabLayout() {
                 borderTopLeftRadius: 25,
                 borderTopRightRadius: 25,
                 borderTopWidth: 0,
-                backgroundColor: 'rgba(15, 15, 15, 0.85)',
+                backgroundColor: 'rgba(15, 15, 15, 0.55)',
                 overflow: 'hidden',
                 },
                 tabBarActiveTintColor: '#8E1616',
@@ -27,7 +27,7 @@ export default function TabLayout() {
                 },
                 tabBarBackground: () => (
                 <BlurView
-                    intensity={90}
+                    intensity={60}
                     tint="dark"
                     style={{
                         ...StyleSheet.absoluteFillObject,

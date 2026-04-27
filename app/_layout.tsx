@@ -1,22 +1,18 @@
-import '@/globalTextPatch';
-
 import { Stack } from 'expo-router';
 import './globals.css';
+import { useFonts } from 'expo-font';
 import { AudioPlayerProvider, useAudioPlayer } from '../context/AudioPlayerContext';
 import MusicPlayer from '../components/MusicPlayer';
-import { View, Platform } from 'react-native';
+import { View } from 'react-native';
+
+const TAB_BAR_HEIGHT = 80;
 
 export default function RootLayout() {
   return (
     <AudioPlayerProvider>
-      <View className="flex-1">
+      <View style={{ flex: 1 }}>
         <Stack>
-          <Stack.Screen
-            name="(tabs)"
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
         <AudioPlayerWrapper />
       </View>
@@ -26,11 +22,17 @@ export default function RootLayout() {
 
 function AudioPlayerWrapper() {
   const { currentSong } = useAudioPlayer();
-
   if (!currentSong) return null;
 
   return (
-    <View className={`absolute left-3 right-3 ${Platform.OS === 'ios' ? 'bottom-24' : 'bottom-20'} rounded-xl justify-center`}>
+    <View
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: TAB_BAR_HEIGHT - 3,
+      }}
+    >
       <MusicPlayer song={currentSong} />
     </View>
   );
