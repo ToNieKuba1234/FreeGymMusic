@@ -2,19 +2,11 @@ import '@/globalTextPatch';
 
 import { Stack } from 'expo-router';
 import './globals.css';
-import { useFonts } from 'expo-font';
-import { AudioPlayerProvider, useAudioPlayer } from './context/AudioPlayerContext';
-import MusicPlayer from './components/MusicPlayer';
+import { AudioPlayerProvider, useAudioPlayer } from '../context/AudioPlayerContext';
+import MusicPlayer from '../components/MusicPlayer';
 import { View, Platform } from 'react-native';
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    SFPro: require('../assets/fonts/SF Pro Display Medium.otf'),
-    SFProBold: require('../assets/fonts/SF Pro Display Bold.otf'),
-  });
-
-  if (!fontsLoaded) return null;
-
   return (
     <AudioPlayerProvider>
       <View className="flex-1">

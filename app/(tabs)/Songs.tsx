@@ -1,13 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
-import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { loadSongsFromFile, removeSongByUri } from '../utils/storage';
-import Song from '../models/Song';
-import { useAudioPlayer } from '../context/AudioPlayerContext';
+import { loadSongsFromFile, removeSongByUri } from '../../utils/storage';
+import Song from '../../models/Song';
+import { useAudioPlayer } from '../../context/AudioPlayerContext';
 
 export default function SongsScreen() {
   const [search, setSearch] = useState('');
@@ -32,24 +31,12 @@ export default function SongsScreen() {
   const handlePlayButton = () => {
     if (songs.length > 0) {
       playSong(songs[0]);
-  }
+    }
   };
 
   const deleteFile = async (uri: string) => {
     try {
       const fileUri = uri.startsWith('file://') ? uri : 'file://' + uri;
-
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status === 'granted') {
-        const assets = await MediaLibrary.getAssetsAsync({ mediaType: 'audio' });
-        const targetAsset = assets.assets.find(asset => asset.uri === fileUri);
-
-        if (targetAsset) {
-          await MediaLibrary.deleteAssetsAsync([targetAsset.id]);
-          return;
-        }
-      }
-
       const fileInfo = await FileSystem.getInfoAsync(fileUri);
       if (fileInfo.exists) {
         await FileSystem.deleteAsync(fileUri, { idempotent: true });

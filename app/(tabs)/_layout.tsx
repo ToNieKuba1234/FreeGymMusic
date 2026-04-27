@@ -40,13 +40,6 @@ export default function TabLayout() {
             }}
             >
             <Tabs.Screen 
-                name="Home"
-                options={{
-                    headerShown: false,
-                    tabBarIcon: ({focused, color}) => <Ionicons name={focused ? "home" : "home-outline"} color={color} size={24}/>
-                }}
-            />
-            <Tabs.Screen 
                 name="Playlists" 
                 options={{
                     headerShown: false,
@@ -60,13 +53,6 @@ export default function TabLayout() {
                     tabBarIcon: ({focused, color}) => <Ionicons name={focused ? "musical-notes" : "musical-notes-outline"} color={color} size={24} />
                 }}
             /> 
-            <Tabs.Screen 
-                name="Download" 
-                options={{
-                    headerShown: false,
-                    tabBarIcon: ({focused, color}) => <Ionicons name="arrow-down-outline" color={color} size={29} />
-                }}
-            />
         </Tabs>
   )
 }
