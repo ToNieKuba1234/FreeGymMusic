@@ -12,7 +12,8 @@ Minimalistyczna aplikacja do odtwarzania muzyki inspirowana estetyką Apple Musi
 
 ## 📱 UI
 
-Czysty, nowoczesny interfejs
+Czysty, nowoczesny i minimalistyczny interfejs, inspirowany
+Apple Music, wiele intuicyjnych rozwiązań
 
 ## 🚀 Jak zacząć?
 
