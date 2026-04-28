@@ -15,8 +15,11 @@ import {
 } from '../../utils/storage';
 import Song from '../../models/Song';
 import { useAudioPlayer } from '../../context/AudioPlayerContext';
+import { SongItem } from '@/components/SongItem';
 
 type SyncState = 'idle' | 'picking' | 'syncing' | 'done';
+
+//TODO: fix when after shuffling "Play" is pressed, then it should clear the shuffled song queue
 
 export default function SongsScreen() {
   const [search, setSearch] = useState('');
@@ -57,6 +60,7 @@ export default function SongsScreen() {
       setLastSyncResult(syncResult);
       await refreshSongs();
       setSyncState('done');
+      
       const lines: string[] = [];
       if (syncResult.imported.length > 0)
         lines.push(`✓ Imported: ${syncResult.imported.length} song${syncResult.imported.length > 1 ? 's' : ''}`);
@@ -64,6 +68,7 @@ export default function SongsScreen() {
         lines.push(`↩ Already exists: ${syncResult.skipped.length}`);
       if (syncResult.failed.length > 0)
         lines.push(`✗ Failed: ${syncResult.failed.length}`);
+      
       Alert.alert('Sync complete', lines.join('\n'), [
         { text: 'OK', onPress: () => setSyncState('idle') },
       ]);
@@ -95,10 +100,10 @@ export default function SongsScreen() {
     if (songs.length > 0) playSong(songs[0]);
   };
 
+  // --- Zaktualizowana funkcja Shuffle ---
   const handleShuffle = () => {
     if (songs.length === 0) return;
     toggleShuffle();
-    // If not currently playing, start from random song
     if (!currentSong) {
       const random = songs[Math.floor(Math.random() * songs.length)];
       playSong(random);
@@ -108,13 +113,6 @@ export default function SongsScreen() {
   const filtered = songs.filter(s =>
     s.title.toLowerCase().includes(search.toLowerCase())
   );
-
-  const syncLabel = {
-    idle: 'Synchronise',
-    picking: 'Picking...',
-    syncing: 'Importing...',
-    done: 'Done',
-  }[syncState];
 
   const isSyncing = syncState === 'picking' || syncState === 'syncing';
 
@@ -133,7 +131,6 @@ export default function SongsScreen() {
             ) : (
               <Ionicons name="sync-outline" size={16} color="#EF4444" />
             )}
-            <Text className="text-sm font-medium text-red-500">{syncLabel}</Text>
           </TouchableOpacity>
         </View>
 
@@ -161,26 +158,22 @@ export default function SongsScreen() {
             className="flex-1 flex-row items-center justify-center py-2.5 rounded-xl bg-zinc-900 border border-zinc-800"
           >
             <MaterialCommunityIcons name="play" size={22} color="#EF4444" style={{ marginRight: 6 }} />
-            <Text className="text-red-500 font-semibold">Play</Text>
+            <Text className="text-red-500 font-semibold text-xl">Play</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleShuffle}
             disabled={songs.length === 0}
-            className={`flex-1 flex-row items-center justify-center py-2.5 rounded-xl border ${
-              isShuffled
-                ? 'bg-red-950 border-red-800'
-                : 'bg-zinc-900 border-zinc-800'
-            }`}
+            className="flex-1 flex-row items-center justify-center py-2.5 rounded-xl border bg-zinc-900 border-zinc-800"
           >
             <MaterialCommunityIcons
               name="shuffle"
               size={22}
-              color={isShuffled ? '#EF4444' : '#EF4444'}
+              color="#EF4444"
               style={{ marginRight: 6 }}
             />
-            <Text className={`font-semibold ${isShuffled ? 'text-red-400' : 'text-red-500'}`}>
-              {isShuffled ? 'Shuffled' : 'Shuffle'}
+            <Text className={`font-semibold text-xl text-red-500`}>
+              Shuffle
             </Text>
           </TouchableOpacity>
         </View>
@@ -203,43 +196,17 @@ export default function SongsScreen() {
         keyExtractor={item => item.uri}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 220 }}
         ItemSeparatorComponent={() => <View className="h-px bg-zinc-900" />}
-        renderItem={({ item, index }) => {
-          const isCurrent = currentSong?.uri === item.uri;
-          return (
-            <TouchableOpacity
-              onPress={() => playSong(item)}
-              activeOpacity={0.7}
-              className="flex-row items-center py-3.5"
-            >
-              <View className="w-8 items-center mr-3">
-                {isCurrent ? (
-                  <Ionicons
-                    name={isPlaying ? 'volume-high' : 'pause'}
-                    size={16}
-                    color="#EF4444"
-                  />
-                ) : (
-                  <Text className="text-zinc-600 text-sm">{index + 1}</Text>
-                )}
-              </View>
-              <View className="flex-1">
-                <Text
-                  className={`text-base font-semibold ${isCurrent ? 'text-red-500' : 'text-white'}`}
-                  numberOfLines={1}
-                >
-                  {item.title}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleDeleteSong(item)}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                className="ml-3 p-1"
-              >
-                <Ionicons name="trash-outline" size={18} color="#52525B" />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={({ item, index }) => (
+          <SongItem
+            song={item}
+            index={index}
+            isCurrent={currentSong?.uri === item.uri}
+            isPlaying={isPlaying}
+            isPlaylist={true}
+            onPress={playSong}
+            onDelete={handleDeleteSong}
+          />
+        )}
       />
     </View>
   );

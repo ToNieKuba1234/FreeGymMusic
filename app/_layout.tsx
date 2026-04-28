@@ -25,14 +25,7 @@ function AudioPlayerWrapper() {
   if (!currentSong) return null;
 
   return (
-    <View
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: TAB_BAR_HEIGHT - 3,
-      }}
-    >
+    <View style={{ position: 'absolute', left: 0, right: 0, bottom: TAB_BAR_HEIGHT - 3 }}>
       <MusicPlayer song={currentSong} />
     </View>
   );
