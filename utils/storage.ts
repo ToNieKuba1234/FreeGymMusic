@@ -12,8 +12,6 @@ async function ensureDir(dir: string): Promise<void> {
   if (!info.exists) await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
 }
 
-// ─── Artwork ──────────────────────────────────────────────────────────────────
-
 export async function saveArtwork(imageUri: string, id: string): Promise<string> {
   await ensureDir(ARTWORK_DIR);
   const ext = imageUri.split('.').pop()?.split('?')[0] || 'jpg';
@@ -29,7 +27,6 @@ export async function deleteArtwork(artworkUri: string): Promise<void> {
   } catch {}
 }
 
-// ─── Songs ────────────────────────────────────────────────────────────────────
 
 export async function loadSongsFromFile(): Promise<Song[]> {
   try {
@@ -109,7 +106,6 @@ export async function scanAndRebuild(): Promise<Song[]> {
 
 export function getSongsDir(): string { return SONGS_DIR; }
 
-// ─── Playlists ────────────────────────────────────────────────────────────────
 
 export async function loadPlaylists(): Promise<Playlist[]> {
   try {

@@ -27,7 +27,7 @@ export default function SongsScreen() {
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
 
-  const { playSong, currentSong, isPlaying, isShuffled, toggleShuffle } = useAudioPlayer();
+  const { playList, currentSong, isPlaying } = useAudioPlayer();
 
   useFocusEffect(
     useCallback(() => {
@@ -96,19 +96,9 @@ export default function SongsScreen() {
     );
   };
 
-  const handlePlayAll = () => {
-    if (songs.length > 0) playSong(songs[0]);
-  };
+  const handlePlayAll = () => { if(songs.length > 0) playList(songs, false)};
 
-  // --- Zaktualizowana funkcja Shuffle ---
-  const handleShuffle = () => {
-    if (songs.length === 0) return;
-    toggleShuffle();
-    if (!currentSong) {
-      const random = songs[Math.floor(Math.random() * songs.length)];
-      playSong(random);
-    }
-  };
+  const handleShuffle = () => {if (songs.length > 0) playList(songs, true)};
 
   const filtered = songs.filter(s =>
     s.title.toLowerCase().includes(search.toLowerCase())
@@ -187,14 +177,14 @@ export default function SongsScreen() {
         <View className="flex-1 items-center justify-center pb-32">
           <Ionicons name="musical-notes-outline" size={52} color="#3F3F46" />
           <Text className="mt-4 text-zinc-500 text-base">No songs yet</Text>
-          <Text className="mt-1 text-zinc-700 text-sm">Tap Synchronise to import MP3s</Text>
+          <Text className="mt-1 text-zinc-700 text-sm">Tap Synch icon to import MP3s</Text>
         </View>
       )}
 
       <FlatList
         data={filtered}
         keyExtractor={item => item.uri}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 220 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 220, flexGrow: 1 }}
         ItemSeparatorComponent={() => <View className="h-px bg-zinc-900" />}
         renderItem={({ item, index }) => (
           <SongItem
@@ -202,8 +192,10 @@ export default function SongsScreen() {
             index={index}
             isCurrent={currentSong?.uri === item.uri}
             isPlaying={isPlaying}
-            isPlaylist={true}
-            onPress={playSong}
+            isPlaylist={false}
+            onPress={() => {
+              playList(filtered, false, index);
+            }}
             onDelete={handleDeleteSong}
           />
         )}

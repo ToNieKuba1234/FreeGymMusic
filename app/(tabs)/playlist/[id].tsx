@@ -16,6 +16,7 @@ import Song from '../../../models/Song';
 import Playlist from '../../../models/Playlist';
 import { useAudioPlayer } from '../../../context/AudioPlayerContext';
 import { SongItem } from '@/components/SongItem';
+import shuffleArray from '@/utils/shuffle';
 
 export default function PlaylistDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,7 +28,7 @@ export default function PlaylistDetailScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const { playSong, currentSong, isPlaying } = useAudioPlayer();
+  const { playSong, playList, currentSong, isPlaying } = useAudioPlayer();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const refresh = useCallback(async () => {
@@ -104,8 +105,9 @@ export default function PlaylistDetailScreen() {
     ]);
   };
 
-  const handlePlayAll = () => songs.length > 0 && playSong(songs[0]);
-  const handleShuffle = () => songs.length > 0 && playSong(songs[Math.floor(Math.random() * songs.length)]);
+  const handlePlayAll = () => songs.length > 0 && playList(songs, false);
+
+  const handleShuffle = () => songs.length > 0 && playList(songs, true);
 
   const songsNotInPlaylist = allSongs.filter(s => !playlist?.songUris.includes(s.uri));
 
@@ -123,7 +125,7 @@ export default function PlaylistDetailScreen() {
         </TouchableOpacity>
 
         <Animated.Text 
-          className="text-white text-xl font-bold flex-1" 
+          className="text-white text-2xl font-bold flex-1" 
           style={{ opacity: headerTitleOpacity }}
           numberOfLines={1}
         >
@@ -161,7 +163,7 @@ export default function PlaylistDetailScreen() {
               )}
             </TouchableOpacity>
 
-            <Text className="text-white text-3xl font-extrabold text-center mb-1">
+            <Text className="text-white text-4xl font-extrabold text-center mb-1">
               {playlist?.name}
             </Text>
 
@@ -203,14 +205,13 @@ export default function PlaylistDetailScreen() {
             index={index}
             isCurrent={currentSong?.uri === item.uri}
             isPlaying={isPlaying}
-            isPlaylist={false}
+            isPlaylist={true}
             onPress={playSong}
             onDelete={handleRemove}
           />
         )}
       />
 
-      {/* MODAL pozostaje bez zmian */}
       <Modal 
         visible={addModalVisible} 
         transparent 

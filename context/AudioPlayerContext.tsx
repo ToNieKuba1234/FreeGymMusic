@@ -1,18 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAudioPlayer as useExpoAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import Song from '../models/Song';
-import { loadSongsFromFile } from '../utils/storage';
 
 type AudioPlayerContextType = {
   isPlaying: boolean;
   isShuffled: boolean;
   currentSong: Song | null;
   playSong: (song: Song) => Promise<void>;
+  playList: (songs: Song[], shuffle: boolean, startIndex?: number) => Promise<void>;
   pause: () => void;
   resume: () => void;
   playNext: () => Promise<void>;
   playPrevious: () => Promise<void>;
-  toggleShuffle: () => void;
 };
 
 const AudioPlayerContext = createContext<AudioPlayerContextType>({
@@ -20,11 +19,11 @@ const AudioPlayerContext = createContext<AudioPlayerContextType>({
   isShuffled: false,
   currentSong: null,
   playSong: async () => {},
+  playList: async () => {},
   pause: () => {},
   resume: () => {},
   playNext: async () => {},
   playPrevious: async () => {},
-  toggleShuffle: () => {},
 });
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -40,11 +39,9 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isShuffled, setIsShuffled] = useState(false);
 
-  const originalPlaylistRef = useRef<Song[]>([]);
-  const playlistRef = useRef<Song[]>([]);
-  const currentIndex = useRef<number>(-1);
-  const isShuffledRef = useRef(false);
-
+  const queueRef = useRef<Song[]>([]);
+  const fullPlaylistRef = useRef<Song[]>([]); 
+  
   const player = useExpoAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
 
@@ -54,7 +51,6 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
         shouldPlayInBackground: true,
         playsInSilentMode: true,
       });
-      await loadPlaylist();
     })();
   }, []);
 
@@ -64,16 +60,31 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
     }
   }, [status.didJustFinish]);
 
-  const loadPlaylist = async () => {
-    const songs = await loadSongsFromFile();
-    originalPlaylistRef.current = songs;
-    playlistRef.current = isShuffledRef.current ? shuffleArray(songs) : songs;
+  const playList = async (songs: Song[], shuffle: boolean, startIndex?: number) => {
+    if (songs.length === 0) return;
+    
+    fullPlaylistRef.current = songs; 
+    setIsShuffled(shuffle);
+
+    const actualStartIndex = startIndex !== undefined 
+      ? startIndex 
+      : (shuffle ? Math.floor(Math.random() * songs.length) : 0);
+    
+    let songsToQueue: Song[];
+
+    if (shuffle) {
+      const startSong = songs[actualStartIndex];
+      const rest = songs.filter((_, index) => index !== actualStartIndex);
+      songsToQueue = [startSong, ...shuffleArray(rest)];
+    } else {
+      songsToQueue = [...songs.slice(actualStartIndex), ...songs.slice(0, actualStartIndex)];
+    }
+    
+    queueRef.current = songsToQueue.slice(1);
+    await playSong(songsToQueue[0]);
   };
 
   const playSong = async (song: Song) => {
-    if (playlistRef.current.length === 0) await loadPlaylist();
-    const index = playlistRef.current.findIndex(s => s.uri === song.uri);
-    currentIndex.current = index === -1 ? 0 : index;
     player.replace({ uri: song.uri });
     player.play();
     setCurrentSong(song);
@@ -83,40 +94,29 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
   const resume = () => player.play();
 
   const playNext = async () => {
-    if (playlistRef.current.length === 0) { await loadPlaylist(); return; }
-    currentIndex.current = currentIndex.current === -1
-      ? 0
-      : (currentIndex.current + 1) % playlistRef.current.length;
-    await playSong(playlistRef.current[currentIndex.current]);
+    if (queueRef.current.length > 0) {
+      const nextSong = queueRef.current[0];
+      queueRef.current = queueRef.current.slice(1);
+      await playSong(nextSong);
+    } 
+    else if (fullPlaylistRef.current.length > 0) {
+      if (isShuffled) {
+        const reshuffled = shuffleArray(fullPlaylistRef.current);
+        queueRef.current = reshuffled.slice(1);
+        await playSong(reshuffled[0]);
+      } else {
+        queueRef.current = fullPlaylistRef.current.slice(1);
+        await playSong(fullPlaylistRef.current[0]);
+      }
+    }
+    else {
+      player.pause();
+      setCurrentSong(null);
+    }
   };
 
   const playPrevious = async () => {
-    if (playlistRef.current.length === 0) { await loadPlaylist(); return; }
-    currentIndex.current = currentIndex.current === -1
-      ? 0
-      : (currentIndex.current - 1 + playlistRef.current.length) % playlistRef.current.length;
-    await playSong(playlistRef.current[currentIndex.current]);
-  };
-
-  const toggleShuffle = () => {
-    const newShuffled = !isShuffledRef.current;
-    isShuffledRef.current = newShuffled;
-    setIsShuffled(newShuffled);
-
-    if (newShuffled) {
-      // Shuffle — put current song first so playback continues smoothly
-      const current = currentSong;
-      const rest = originalPlaylistRef.current.filter(s => s.uri !== current?.uri);
-      const shuffled = current ? [current, ...shuffleArray(rest)] : shuffleArray(rest);
-      playlistRef.current = shuffled;
-      currentIndex.current = 0;
-    } else {
-      // Unshuffle — restore original order, find current song
-      playlistRef.current = originalPlaylistRef.current;
-      currentIndex.current = currentSong
-        ? originalPlaylistRef.current.findIndex(s => s.uri === currentSong.uri)
-        : -1;
-    }
+    console.log("Previous not implemented for queue yet");
   };
 
   return (
@@ -125,11 +125,11 @@ export const AudioPlayerProvider = ({ children }: { children: React.ReactNode })
       isShuffled,
       currentSong,
       playSong,
+      playList,
       pause,
       resume,
       playNext,
       playPrevious,
-      toggleShuffle,
     }}>
       {children}
     </AudioPlayerContext.Provider>

@@ -1,6 +1,8 @@
-/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./app/**/*.{js,jsx,ts,tsx}"],
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}" 
+  ],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
@@ -9,10 +11,6 @@ module.exports = {
         fontColor: "#EEEEEE",
         accent1: "#8E1616",
         accent2: "#D84040"
-      },
-      fontFamily: {
-        sans: ['SFPro'],
-        bold: ['SFProBold'],
       }
     },
   },
