@@ -124,7 +124,7 @@ export default function PlaylistsScreen() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 120 }}>
           <MaterialCommunityIcons name="playlist-music-outline" size={52} color="#3f3f46" />
           <Text style={{ marginTop: 16, color: '#71717a', fontSize: 16 }}>No playlists yet</Text>
-          <Text style={{ marginTop: 4, color: '#3f3f46', fontSize: 14 }}>Tap New to create one</Text>
+          <Text style={{ marginTop: 4, color: '#3f3f46', fontSize: 14 }}>Tap + to create one</Text>
         </View>
       )}
 
